@@ -55,18 +55,39 @@ exports.rank = function(req, res, next) {
     { $project: { name: '$csfy.name', stName: '$csfy.stName', count: 1 } }
   ])
     .then(obj => {
+      let sum = 0,
+        avg = 0;
       // 由于lookup关联返回的可能是集合，所以name,stName是[],toString一下
       const objs = _.map(obj, function(v) {
         v.name = v.name.toString();
         v.stName = v.stName.toString();
+        sum += v.count;
         return v;
       });
 
-      res.json(objs);
-      // res.json(obj);
+      sum = sum.toFixed(2) || '0.00';
+      avg = objs.length ? (sum / objs.length).toFixed(2) : '0.00';
+
+      res.json(
+        response.success({
+          payload: {
+            result: {
+              cellList: objs,
+              sum,
+              avg
+            }
+          },
+          tk: { api_tk: req.api_tk }
+        })
+      );
     })
     .catch(err => {
-      res.json(err);
+      res.json(
+        response.fail({
+          payload: { message: err },
+          tk: { api_tk: req.api_tk }
+        })
+      );
     });
 
   /*
