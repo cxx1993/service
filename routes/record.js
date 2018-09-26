@@ -29,11 +29,14 @@ router.get('/find/:id', $tkCheck, controller.find);
 // 多条数据 by 查询条件
 router.post('/list', $tkCheck, controller.list);
 
-
 // 图表分析
-// 排行榜
-router.post('/rank', $tkCheck, chart_controller.rank);  
-// 图表
-router.post('/analyze', $tkCheck, chart_controller.analyze);
+// 排行榜 +  图表
+router.post(
+  '/chart',
+  $tkCheck,
+  chart_controller.rank,
+  chart_controller.analyze,
+  chart_controller.chart
+);
 
 module.exports = router;

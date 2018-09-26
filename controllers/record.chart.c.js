@@ -35,7 +35,7 @@ exports.rank = function(req, res, next) {
       $lt: newEdate
     };
   }
-
+  // console.log(newSdate, newEdate);
   // 聚合查询
   Record.aggregate([
     // { $project: { balance: 1, type: 1, classifyId: 1, createDate: 1 } },
@@ -68,26 +68,19 @@ exports.rank = function(req, res, next) {
       sum = sum.toFixed(2) || '0.00';
       avg = objs.length ? (sum / objs.length).toFixed(2) : '0.00';
 
-      res.json(
-        response.success({
-          payload: {
-            result: {
-              cellList: objs,
-              sum,
-              avg
-            }
-          },
-          tk: { api_tk: req.api_tk }
-        })
-      );
+      res.rank = {
+        cellList: objs,
+        sum,
+        avg
+      };
+      next();
     })
     .catch(err => {
-      res.json(
-        response.fail({
-          payload: { message: err },
-          tk: { api_tk: req.api_tk }
-        })
-      );
+      res.rank = {
+        cellList: [],
+        sum: '0.00',
+        avg: '0.00'
+      };
     });
 
   /*
@@ -147,15 +140,15 @@ exports.analyze = function(req, res, next) {
 
   try {
     switch (period) {
-      case 'year':
+      case 0:
         group._id = { $month: '$createDate' }; // 按年，返回该日期的月份部分
         dateToString = { format: '%m月', date: '$createDate' }; // 返回第x月
         break;
-      case 'month':
+      case 1:
         group._id = { $dayOfMonth: '$createDate' }; // 按月，返回该日期是这一个月的第几天
         dateToString = { format: '%m-%d', date: '$createDate' }; // 返回第x日
         break;
-      case 'day':
+      case 2:
         group._id = { $dayOfWeek: '$createDate' }; // 按年，返回的是这个周的星期几
         dateToString = { format: '周%w', date: '$createDate' }; // 返回第x周
         break;
@@ -182,16 +175,20 @@ exports.analyze = function(req, res, next) {
     ]).then(result => {
       // 处理结果
       const rts = formatAnalyze(period, result, dateRange);
-      res.json(rts);
+      res.analyze = rts;
+      next();
+      // res.json(rts);
       // res.json(result);
     });
   } catch (error) {
-    res.json(error);
+    res.analyze = { xAxis: [], yAxis: [] };
+    next();
+    // res.json(error);
   }
 };
 
 /**
- *
+ * 图表分析 - 数据处理
  * @param {*} period 周期类型：year/month/day
  * @param {*} arr
  * @param {*} dateRange 时间范围：{year:xx, month:xx}
@@ -215,18 +212,18 @@ function formatAnalyze(period, arr, dateRange) {
 
   // 完整createDate
   switch (period) {
-    case 'year':
+    case 0:
       formatAxis = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; //x轴默认
       unit = '月';
       break;
-    case 'month':
+    case 1:
       const fate = new Date(year, month, 0).getDate();
       for (let i = 1; i <= fate; i++) {
         formatAxis.push(i);
       }
       unit = '日';
       break;
-    case 'day':
+    case 2:
       formatAxis = [1, 2, 3, 4, 5, 6, 7]; // y轴默认
       unit = '周';
       break;
@@ -246,3 +243,8 @@ function formatAnalyze(period, arr, dateRange) {
 
   return { xAxis, yAxis };
 }
+
+exports.chart = function(req, res, next) {
+  const { rank, analyze } = res;
+  res.json({ rank, analyze });
+};
